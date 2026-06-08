@@ -1,0 +1,410 @@
+# ============================================================
+# Multi-Agent AIOps Platform - Docker Compose
+# ============================================================
+# 启动 Milvus 向量数据库 (含 etcd + minio + standalone + attu UI)
+#
+# 使用:
+#   docker compose up -d        # 启动
+#   docker compose down         # 停止
+#   docker compose logs -f      # 看日志
+#
+# 端口:
+#   - 19530: Milvus gRPC
+#   - 9091:  Milvus REST
+#   - 9001:  MinIO 控制台 (root/Milvus)
+#   - 8000:  Attu Milvus 可视化界面
+#
+# 注意: 如果你已经有其他 Milvus 实例在跑 (如 super_biz_agent_py),
+#       请先停掉再启动本项目, 避免端口冲突.
+
+services:
+  etcd:
+    container_name: multi-agent-etcd
+    image: quay.io/coreos/etcd:v3.5.5
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    volumes:
+      - multi_agent_etcd:/etcd
+    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  minio:
+    container_name: multi-agent-minio
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    environment:
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "9001:9001"
+    volumes:
+      - multi_agent_minio:/minio_data
+    command: minio server /minio_data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+
+  standalone:
+    container_name: multi-agent-milvus
+    image: milvusdb/milvus:v2.4.10
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+    volumes:
+      - multi_agent_milvus:/var/lib/milvus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 3
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    depends_on:
+      - "etcd"
+      - "minio"
+    restart: unless-stopped
+
+  attu:
+    container_name: multi-agent-attu
+    image: zilliz/attu:v2.4
+    environment:
+      MILVUS_URL: standalone:19530
+    ports:
+      - "8000:3000"
+    depends_on:
+      - "standalone"
+
+  redis:
+    container_name: multi-agent-redis
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - multi_agent_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  postgres:
+    container_name: multi-agent-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-multi_agent_aiops}
+      POSTGRES_USER: ${POSTGRES_USER:-multi_agent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-multi_agent}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - multi_agent_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-multi_agent} -d ${POSTGRES_DB:-multi_agent_aiops}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  open-websearch:
+    container_name: multi-agent-open-websearch
+    build:
+      context: ./open-webSearch-main
+    environment:
+      NODE_ENV: production
+      DEFAULT_SEARCH_ENGINE: ${OPEN_WEBSEARCH_ENGINE:-bing}
+      SEARCH_MODE: ${OPEN_WEBSEARCH_SEARCH_MODE:-auto}
+      ENABLE_CORS: "true"
+      CORS_ORIGIN: "*"
+    command: ["node", "build/index.js", "serve", "--host", "0.0.0.0", "--port", "3210"]
+    ports:
+      - "${OPEN_WEBSEARCH_PORT:-3210}:3210"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3210/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ============================================================
+  # 应用层 (改造文档第 10 步): API + 3 个 Worker, 一键拉起高并发架构
+  # 放在 profile "app" 下: 默认 `docker compose up -d` 只起基础设施 (行为不变);
+  # 要连应用一起起: `docker compose --profile app up -d --build`
+  # ============================================================
+  mcp-system:
+    container_name: multi-agent-mcp-system
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    command: ["python", "mcp_servers/system_server.py"]
+    ports:
+      - "8005:8005"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8005), 2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mcp-websearch:
+    container_name: multi-agent-mcp-websearch
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      OPEN_WEBSEARCH_BASE_URL: http://open-websearch:3210
+    command: ["python", "mcp_servers/websearch_server.py"]
+    ports:
+      - "8006:8006"
+    depends_on:
+      open-websearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8006), 2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mcp-winlog:
+    container_name: multi-agent-mcp-winlog
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    command: ["python", "mcp_servers/winlog_server.py"]
+    ports:
+      - "8008:8008"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8008), 2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mcp-network:
+    container_name: multi-agent-mcp-network
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    command: ["python", "mcp_servers/network_server.py"]
+    ports:
+      - "8009:8009"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8009), 2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mcp-docker:
+    container_name: multi-agent-mcp-docker
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    command: ["python", "mcp_servers/docker_server.py"]
+    ports:
+      - "8011:8011"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('127.0.0.1', 8011), 2); s.close()"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    container_name: multi-agent-api
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      # 容器内用服务名互联, 覆盖 .env 里的 localhost
+      DATABASE_URL: postgresql://${POSTGRES_USER:-multi_agent}:${POSTGRES_PASSWORD:-multi_agent}@postgres:5432/${POSTGRES_DB:-multi_agent_aiops}
+      REDIS_URL: redis://redis:6379/0
+      MILVUS_HOST: standalone
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+      OPEN_WEBSEARCH_BASE_URL: http://open-websearch:3210
+      MCP_SYSTEM_URL: http://mcp-system:8005/mcp
+      MCP_WEBSEARCH_URL: http://mcp-websearch:8006/mcp
+      MCP_WINLOG_URL: http://mcp-winlog:8008/mcp
+      MCP_NETWORK_URL: http://mcp-network:8009/mcp
+      MCP_DOCKER_URL: http://mcp-docker:8011/mcp
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9900", "--workers", "4"]
+    ports:
+      - "${APP_PORT:-9900}:9900"
+    volumes:
+      - ./benchmark/reports:/app/benchmark/reports:ro
+      - ./data/wiki:/app/data/wiki
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      standalone:
+        condition: service_healthy
+      mcp-system:
+        condition: service_healthy
+      mcp-websearch:
+        condition: service_healthy
+      mcp-winlog:
+        condition: service_healthy
+      mcp-network:
+        condition: service_healthy
+      mcp-docker:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker-1:
+    container_name: multi-agent-worker-1
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-multi_agent}:${POSTGRES_PASSWORD:-multi_agent}@postgres:5432/${POSTGRES_DB:-multi_agent_aiops}
+      REDIS_URL: redis://redis:6379/0
+      MILVUS_HOST: standalone
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+      OPEN_WEBSEARCH_BASE_URL: http://open-websearch:3210
+      MCP_SYSTEM_URL: http://mcp-system:8005/mcp
+      MCP_WEBSEARCH_URL: http://mcp-websearch:8006/mcp
+      MCP_WINLOG_URL: http://mcp-winlog:8008/mcp
+      MCP_NETWORK_URL: http://mcp-network:8009/mcp
+      MCP_DOCKER_URL: http://mcp-docker:8011/mcp
+    command: ["python", "-m", "app.diagnosis_worker", "--name", "worker-1"]
+    volumes:
+      - ./data/wiki:/app/data/wiki
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mcp-system:
+        condition: service_healthy
+      mcp-websearch:
+        condition: service_healthy
+      mcp-winlog:
+        condition: service_healthy
+      mcp-network:
+        condition: service_healthy
+      mcp-docker:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker-2:
+    container_name: multi-agent-worker-2
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-multi_agent}:${POSTGRES_PASSWORD:-multi_agent}@postgres:5432/${POSTGRES_DB:-multi_agent_aiops}
+      REDIS_URL: redis://redis:6379/0
+      MILVUS_HOST: standalone
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+      OPEN_WEBSEARCH_BASE_URL: http://open-websearch:3210
+      MCP_SYSTEM_URL: http://mcp-system:8005/mcp
+      MCP_WEBSEARCH_URL: http://mcp-websearch:8006/mcp
+      MCP_WINLOG_URL: http://mcp-winlog:8008/mcp
+      MCP_NETWORK_URL: http://mcp-network:8009/mcp
+      MCP_DOCKER_URL: http://mcp-docker:8011/mcp
+    command: ["python", "-m", "app.diagnosis_worker", "--name", "worker-2"]
+    volumes:
+      - ./data/wiki:/app/data/wiki
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mcp-system:
+        condition: service_healthy
+      mcp-websearch:
+        condition: service_healthy
+      mcp-winlog:
+        condition: service_healthy
+      mcp-network:
+        condition: service_healthy
+      mcp-docker:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker-3:
+    container_name: multi-agent-worker-3
+    profiles: ["app"]
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-multi_agent}:${POSTGRES_PASSWORD:-multi_agent}@postgres:5432/${POSTGRES_DB:-multi_agent_aiops}
+      REDIS_URL: redis://redis:6379/0
+      MILVUS_HOST: standalone
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LOCAL_LLM_BASE_URL: http://host.docker.internal:11434/v1
+      OPEN_WEBSEARCH_BASE_URL: http://open-websearch:3210
+      MCP_SYSTEM_URL: http://mcp-system:8005/mcp
+      MCP_WEBSEARCH_URL: http://mcp-websearch:8006/mcp
+      MCP_WINLOG_URL: http://mcp-winlog:8008/mcp
+      MCP_NETWORK_URL: http://mcp-network:8009/mcp
+      MCP_DOCKER_URL: http://mcp-docker:8011/mcp
+    command: ["python", "-m", "app.diagnosis_worker", "--name", "worker-3"]
+    volumes:
+      - ./data/wiki:/app/data/wiki
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mcp-system:
+        condition: service_healthy
+      mcp-websearch:
+        condition: service_healthy
+      mcp-winlog:
+        condition: service_healthy
+      mcp-network:
+        condition: service_healthy
+      mcp-docker:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  default:
+    name: multi_agent_network
+
+volumes:
+  multi_agent_etcd:
+  multi_agent_minio:
+  multi_agent_milvus:
+  multi_agent_redis:
+  multi_agent_postgres:

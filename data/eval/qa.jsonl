@@ -1,0 +1,10 @@
+{"question": "Redis 连接池耗尽导致 5xx 升高,怎么排查?", "ground_truth": "查看 connected_clients 与 maxclients 比例; 找住连接不释放的客户端 (CLIENT LIST 看 idle); 排查应用侧连接泄漏 (未关闭 / 长事务); 临时扩 maxclients 缓解。"}
+{"question": "MySQL 慢查询拖垮接口,常见原因和处置?", "ground_truth": "看 slow_query_log + EXPLAIN 找无索引或全表扫; 看 SHOW PROCESSLIST 是否有锁等待; innodb_buffer_pool_size 是否过小; 索引缺失加索引,锁等待杀长事务。"}
+{"question": "Kubernetes Pod 反复 CrashLoopBackOff 怎么定位?", "ground_truth": "kubectl describe pod 看 Last State 与 Reason; kubectl logs --previous 看上一次崩溃日志; 常见: OOMKilled 调 limits.memory、配置错误改 env/configmap、就绪探针失败查健康检查。"}
+{"question": "Linux 主机 CPU 飙到 100%, 怎么找罪魁?", "ground_truth": "top 看哪个进程占 CPU; pidstat -t 看是哪个线程; perf top 或 py-spy/jstack 看热点函数; 区分用户态 us 高 (代码) 还是内核态 sy 高 (系统调用密集)。"}
+{"question": "磁盘空间 95% 告警,如何快速释放空间且找根因?", "ground_truth": "df -h 定位哪个挂载点满; du -sh /* | sort -h 找大目录; 常见: 日志未轮转、容器 overlay 残留、core dump 堆积; 先清旧日志再排查写入源,长期上 logrotate。"}
+{"question": "Nginx 大量返回 502 Bad Gateway,可能原因?", "ground_truth": "上游服务挂了或超时 (curl 直接打上游确认); proxy_read_timeout/proxy_connect_timeout 太短; 上游连接被 keepalive 提前关闭; worker_connections 不够导致 upstream socket 耗尽。"}
+{"question": "JVM 应用频繁 Full GC,如何排查?", "ground_truth": "jstat -gcutil 看 GC 频率与停顿; jmap -histo 看大对象; 常见: 堆太小、内存泄漏 (静态集合无界增长)、Metaspace 泄漏 (类加载未释放); 加堆 + 修内存泄漏 + dump 分析。"}
+{"question": "Kafka consumer lag 持续增长,怎么处理?", "ground_truth": "消费速度跟不上生产: 看 consumer group lag (kafka-consumer-groups); 增加 consumer 实例或分区数; 看 consumer 是否卡在某条慢消息 (poison message); 检查下游写入是否成为瓶颈。"}
+{"question": "调用链 P99 延迟突增,如何定位是哪一跳?", "ground_truth": "拉一段 trace 看 span 耗时分布; 排序找最长 span 对应的服务; 检查该服务的依赖 (DB/Redis/下游服务); 同时看其指标 (RT/错误率/连接池); 灰度回滚或限流。"}
+{"question": "etcd 集群响应慢、k8s API 卡顿,排查方向?", "ground_truth": "etcdctl endpoint status 看 leader / db size; 磁盘 fsync 延迟过高 (etcd 对磁盘极敏感); db 是否接近 quota (2GB 默认); 网络抖动导致心跳超时;defrag + 提升存储 IOPS。"}

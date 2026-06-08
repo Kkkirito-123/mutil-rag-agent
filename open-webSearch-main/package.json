@@ -1,0 +1,68 @@
+{
+  "name": "open-websearch",
+  "version": "2.1.9",
+  "description": "web search the internet",
+  "type": "module",
+  "bin": {
+    "open-websearch": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js",
+    "serve": "node build/index.js serve",
+    "status": "node build/index.js status",
+    "search:cli": "node build/index.js search",
+    "test:stdio": "node -e \"process.env.MODE='stdio'; import('./build/index.js')\"",
+    "test:http": "node -e \"process.env.MODE='http'; import('./build/index.js')\"",
+    "test:both": "node -e \"process.env.MODE='both'; import('./build/index.js')\"",
+    "test": "tsc && node build/tools/runCurrentTests.js",
+    "test:list": "tsc && node build/tools/runCurrentTests.js --list",
+    "test:bing-parser": "tsc && node build/test/test-bing-parser.js",
+    "test:cli": "tsc && node build/test/test-cli-search.js",
+    "test:cli-search": "tsc && node build/test/test-cli-search.js",
+    "test:core-search": "tsc && node build/test/test-core-search.js",
+    "test:core-fetch-services": "tsc && node build/test/test-core-fetch-services.js",
+    "test:core-target-validation": "tsc && node build/test/test-core-target-validation.js",
+    "test:engine-normalization": "tsc && node build/test/test-engine-normalization.js",
+    "test:local-daemon": "tsc && node build/test/test-local-daemon.js",
+    "test:mcp-adapter": "tsc && node build/test/test-mcp-adapter.js",
+    "test:runtime": "tsc && node build/test/test-runtime.js",
+    "test:startpage": "tsc && node build/test/test-startpage.js",
+    "test:http-request-options": "tsc && node build/test/test-http-request-options.js",
+    "test:url-safety": "tsc && node build/test/test-url-safety.js",
+    "test:redirect-safety": "tsc && node build/test/test-redirect-safety.js",
+    "test:browser-path-guard": "tsc && node build/test/test-browser-path-guard.js",
+    "test:web-content": "tsc && node build/test/test-web-content.js",
+    "test:web-content:live": "tsc && node build/test/test-web-content-live.js",
+    "test:bing:live": "tsc && node build/test/test-bing-live.js",
+    "test:article-fetch:live": "tsc && node build/test/test-article-fetch-live.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.2",
+    "@mozilla/readability": "^0.6.0",
+    "@types/cheerio": "^0.22.35",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.22.1",
+    "https-proxy-agent": "^7.0.6",
+    "ipaddr.js": "^2.3.0",
+    "jsdom": "^26.1.0",
+    "koffi": "^2.16.0",
+    "request-filtering-agent": "^3.2.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.21",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^20.17.10",
+    "typescript": "^5.3.3"
+  }
+}

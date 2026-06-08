@@ -1,0 +1,59 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Logs / runtime
+logs/
+*.log
+*.log.err
+*.out.log
+*.err.log
+*.tmp
+tmp/
+
+# Docker / databases / local state
+volumes/
+origin/
+data/wiki/*
+!data/wiki/
+!data/wiki/CONVENTIONS.md
+data/milvus/
+data/redis/
+data/minio/
+data/etcd/
+
+# Node / open-webSearch
+node_modules/
+open-webSearch-main/node_modules/
+open-webSearch-main/build/
+open-webSearch-main/dist/
+open-webSearch-main/*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+
+# Test run artifacts
+tests/__*.log
+tests/__*.log.err
+benchmark/concurrency-results/
+.coverage
+htmlcov/
+coverage/
+*.sqlite
+*.sqlite3
+*.db

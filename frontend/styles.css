@@ -1,0 +1,492 @@
+/* ============================================================
+   Multi-Agent AIOps — 扁平 / 方角 / 无边框 / 简约 设计系统
+   设计语言: 近灰阶中性盘 + 单一克制强调色 (cobalt #3B5BDB),
+   全局方角, 无阴影无发光, 状态/严重等级用 圆点 + 细色条 + 单色文字 表达,
+   而不是大块 pastel 撞色. (参照 Linear / Vercel / Datadog 浅色后台)
+   ============================================================ */
+
+:root {
+  /* ===== 中性盘 (近灰阶 7 级) ===== */
+  --page-bg:         #F7F8FA;
+  --surface:         #FFFFFF;
+  --surface-alt:     #F5F6F7;
+  --hairline:        #E6E8EB;
+  --hairline-strong: #D6D9DE;
+  --text-primary:    #18181B;
+  --text-secondary:  #4A5057;
+  --text-muted:      #8A8F98;
+
+  /* ===== 单一强调色 (cobalt) ===== */
+  --accent:        #3B5BDB;
+  --accent-hover:  #324FC4;
+  --accent-weak:   rgba(59, 91, 219, 0.08);
+  --accent-text:   #FFFFFF;
+
+  /* ===== 状态色 (低饱和, 仅用于 点 / 2px 条 / 文字) ===== */
+  --st-pending: #A16207;
+  --st-running: #3B5BDB;
+  --st-success: #2F9461;
+  --st-failed:  #D14343;
+  --st-neutral: #8A8F98;
+
+  /* ===== 严重等级 ===== */
+  --sev-critical: #D14343;
+  --sev-warning:  #C2871A;
+  --sev-info:     #8A8F98;   /* info 是安静的默认 = 灰, 不是蓝 */
+  --sev-unknown:  #C7CBD1;
+  --tint-critical: rgba(209, 67, 67, 0.05);
+
+  /* ===== 字体 ===== */
+  --font-ui:   ui-sans-serif, -apple-system, "SF Pro Text", "Segoe UI", "Inter", Roboto, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", "JetBrains Mono", "Roboto Mono", Menlo, Consolas, monospace;
+
+  --fs-micro:  10.5px;
+  --fs-xs:     11.5px;
+  --fs-sm:     12.5px;
+  --fs-base:   13px;
+  --fs-lg:     15px;
+  --fs-metric: 22px;
+  --fs-h1:     18px;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-strong:  600;
+
+  --lh-body:    1.5;
+  --lh-metric:  1.2;
+  --track-eyebrow: 0.07em;
+
+  --radius: 0;
+  --shadow-overlay: 0 1px 2px rgba(24, 24, 27, 0.06), 0 8px 24px rgba(24, 24, 27, 0.10);
+  --transition: 120ms ease;
+}
+
+/* ============================================================
+   全局 RESET —— 用属性选择器一次性中和所有 Tailwind / inline 视觉 tell,
+   无需逐个改 72 处 rounded / 12 处 gradient / 9 处 shadow / ~36 处 pastel.
+   必须放在所有组件规则之前.
+   ============================================================ */
+
+/* 1) 全部方角. 圆点等真正的"仪表"再单独恢复圆形 */
+[class*="rounded"] { border-radius: 0 !important; }
+.sev-dot,
+.status-dot,
+.rag-spinner,
+.dot-round { border-radius: 999px !important; }
+
+/* 2) 去掉所有阴影 / 发光 / ring; 唯一保留的浮层除外 */
+[class*="shadow"] { box-shadow: none !important; }
+[class*="focus:ring"]:focus,
+[class*="ring-"] { box-shadow: none !important; }
+#approval-panel { box-shadow: var(--shadow-overlay) !important; }
+
+/* 3) 去掉所有渐变, 拍平成纯色 (组件各自再设回自己的底色).
+      只匹配 bg-gradient-* (Tailwind 渐变必带此前缀), 不用 from-/via-/to- 子串选择器,
+      避免今后误伤任何含 "to-" 子串的类. */
+[class*="bg-gradient"] { background-image: none !important; }
+
+/* 4) 把彩色 pastel (bg-*-50/100) 统一映射为中性 surface-alt; slate 保留 (它本就是中性).
+      用 [class~=] 精确匹配整个 token, 避免 bg-rose-50 误伤 bg-rose-500. */
+[class~="bg-indigo-50"], [class~="bg-indigo-100"],
+[class~="bg-emerald-50"], [class~="bg-emerald-100"],
+[class~="bg-amber-50"], [class~="bg-amber-100"],
+[class~="bg-rose-50"], [class~="bg-rose-100"],
+[class~="bg-blue-50"],
+[class~="bg-red-50"], [class~="bg-red-100"] { background-color: var(--surface-alt) !important; }
+[class~="border-indigo-100"], [class~="border-emerald-100"],
+[class~="border-amber-100"], [class~="border-rose-100"],
+[class~="border-blue-100"], [class~="border-indigo-200"],
+[class~="border-amber-200"], [class~="border-rose-200"],
+[class~="border-emerald-200"], [class~="border-rose-400"] { border-color: var(--hairline) !important; }
+
+/* 4b) 文字色 / 实色强调 桥接: reset 不碰文字色, 这里把残留的 Tailwind 彩色文字 &
+      实色靛紫统一收敛到 token (与 bg/border 中和同策略), 避免逐个改 JS 调用点.
+      只收语义状态色, text-slate-* / text-white 保留. */
+[class~="text-indigo-700"], [class~="text-indigo-600"], [class~="text-indigo-500"],
+[class~="text-blue-700"], [class~="text-blue-600"] { color: var(--accent) !important; }
+[class~="text-emerald-700"], [class~="text-emerald-600"], [class~="text-green-600"] { color: var(--st-success) !important; }
+[class~="text-rose-700"], [class~="text-rose-600"], [class~="text-rose-500"], [class~="text-red-700"], [class~="text-red-500"] { color: var(--st-failed) !important; }
+[class~="text-amber-900"], [class~="text-amber-800"], [class~="text-amber-700"], [class~="text-amber-600"] { color: var(--st-pending) !important; }
+[class*="bg-indigo-6"], [class*="bg-indigo-7"] { background-color: var(--accent) !important; }
+/* 原生控件强调色统一到 cobalt (覆盖 accent-indigo-600 等) */
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+
+/* 5) 运动节食: 去掉一切装饰性动画 / transform; 只保留 颜色/透明度/边框 过渡 */
+*, *::before, *::after {
+  animation: none !important;
+  transition-property: color, background-color, border-color, opacity, outline-color !important;
+  transition-duration: var(--transition) !important;
+}
+/* 唯一允许的"存活"动效: running 圆点的平静呼吸 (尊重 reduce-motion) */
+@media (prefers-reduced-motion: no-preference) {
+  .status-dot.is-running,
+  .inc-badge-running::before,
+  .sev-dot.is-live { animation: breathe 1.6s ease-in-out infinite !important; }
+}
+@keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* 6) 基础排版 + 页面底色 */
+html { -webkit-font-smoothing: antialiased; }
+body {
+  background: var(--page-bg) !important;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+}
+.font-bold, b, strong { font-weight: var(--fw-strong) !important; }
+.font-mono, code, pre, kbd { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
+
+/* 7) 焦点: 1px inset accent 描边, 不要柔光 ring */
+:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent) !important; }
+
+/* ============================================================
+   顶栏
+   ============================================================ */
+.app-header { background: var(--surface); border-bottom: 1px solid var(--hairline); }
+.app-header .max-w-7xl { padding-top: 14px; padding-bottom: 14px; }
+.app-header__title { font-size: var(--fs-h1); font-weight: var(--fw-strong); letter-spacing: -0.01em; color: var(--text-primary); }
+.app-header__sub   { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.hdr-bell { background: transparent; border: 0; color: var(--text-secondary); font-size: var(--fs-xs); font-weight: var(--fw-medium); cursor: pointer; }
+.hdr-bell:hover { color: var(--text-primary); }
+/* 有待审批时静态强调 (取代抖动动效): 文字转红加粗 */
+.hdr-bell.has-pending { color: var(--st-failed); font-weight: var(--fw-strong); }
+.hdr-bell__count { font-family: var(--font-mono); color: var(--st-failed); font-weight: var(--fw-strong); }
+
+/* 复用状态圆点 */
+.status-dot { display: inline-block; width: 8px; height: 8px; background: var(--text-muted); flex: none; }
+.status-dot.is-pending { background: var(--st-pending); }
+.status-dot.is-running { background: var(--st-running); }
+.status-dot.is-success { background: var(--st-success); }
+.status-dot.is-failed  { background: var(--st-failed); }
+
+/* ============================================================
+   Tab 条 (下划线指示, 无白色"文件夹"卡)
+   ============================================================ */
+.tabbar { background: transparent; border-bottom: 1px solid var(--hairline); }
+.tabbar nav { padding: 0 0 0 2px; gap: 2px; }
+.tab-btn {
+  padding: 10px 14px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.tab-btn:hover { color: var(--text-secondary); background: transparent; }
+.tab-active {
+  color: var(--text-primary) !important;
+  font-weight: var(--fw-strong) !important;
+  border-bottom-color: var(--accent) !important;
+  background: transparent !important;
+}
+.tab-surface {
+  background: var(--surface);
+  border: 0;
+  border-bottom: 1px solid var(--hairline);
+  padding: 24px;
+  min-height: 600px;
+}
+
+/* ============================================================
+   统计条 (取代彩虹 pastel 统计卡): 一条 hairline 分隔的 datasheet
+   ============================================================ */
+.stat-strip { display: grid; border: 1px solid var(--hairline); background: var(--surface); }
+.stat-strip.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.stat-strip.cols-5 { grid-template-columns: repeat(5, 1fr); }
+.stat-cell { padding: 12px 14px; border-left: 1px solid var(--hairline); background: transparent; }
+.stat-cell:first-child { border-left: 0; }
+.stat-cell[data-state="running"]   { border-top: 2px solid var(--st-running); }
+.stat-cell[data-state="pending"]   { border-top: 2px solid var(--st-pending); }
+.stat-cell[data-state="succeeded"] { border-top: 2px solid var(--st-success); }
+.stat-cell[data-state="failed"]    { border-top: 2px solid var(--st-failed); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-strong);
+  text-transform: uppercase;
+  letter-spacing: var(--track-eyebrow);
+  color: var(--text-muted);
+  display: flex; align-items: center; gap: 4px;
+}
+.stat-num {
+  font-family: var(--font-mono);
+  font-size: var(--fs-metric);
+  font-weight: var(--fw-strong);
+  line-height: var(--lh-metric);
+  color: var(--text-primary);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.stat-num.is-failed { color: var(--st-failed); }
+.stat-sub { font-size: var(--fs-micro); color: var(--text-muted); margin-top: 2px; }
+
+/* ============================================================
+   队列水位条
+   ============================================================ */
+.inc-queue-card { border: 1px solid var(--hairline); background: var(--surface); padding: 10px 12px; }
+
+/* ============================================================
+   执行步骤卡片
+   ============================================================ */
+.step-item {
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-left: 2px solid var(--hairline);
+  background: var(--surface);
+}
+.step-item.executing { border-left-color: var(--accent); background: var(--surface-alt); }
+.step-item.done      { border-left-color: var(--st-success); background: var(--surface); }
+
+.step-item .step-stream {
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: var(--surface-alt);
+  border-left: 2px solid var(--hairline);
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.step-item.executing .step-stream { border-left-color: var(--accent); }
+.step-item.done .step-stream { display: none; }
+
+/* AIOps 定高双栏 */
+.aiops-grid { height: calc(100vh - 320px); min-height: 520px; }
+
+/* ============================================================
+   诊断模式切换
+   ============================================================ */
+.diagnosis-mode-btn {
+  min-width: 44px;
+  padding: 8px 10px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  background: var(--surface);
+}
+.diagnosis-mode-btn + .diagnosis-mode-btn { border-left: 1px solid var(--hairline); }
+.diagnosis-mode-btn:hover { background: var(--surface-alt); }
+.diagnosis-mode-btn.active { color: var(--accent); background: var(--surface-alt); font-weight: var(--fw-strong); }
+
+/* ============================================================
+   Chat 气泡
+   ============================================================ */
+.chat-msg {
+  padding: 10px 14px;
+  max-width: 85%;
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+}
+.chat-msg.user { background: var(--accent); color: var(--accent-text); margin-left: auto; }
+.chat-msg.assistant { background: var(--surface); color: var(--text-primary); border: 1px solid var(--hairline); }
+.chat-msg.assistant pre { background: var(--surface-alt); border: 1px solid var(--hairline); padding: 8px; overflow-x: auto; font-size: 12px; }
+.chat-msg.assistant code { background: var(--surface-alt); padding: 1px 4px; font-size: 12px; }
+
+/* ============================================================
+   Markdown 报告
+   ============================================================ */
+.prose h1 { font-size: var(--fs-h1); font-weight: var(--fw-strong); margin-top: 1em; margin-bottom: 0.5em; color: var(--text-primary); }
+.prose h2 { font-size: var(--fs-lg); font-weight: var(--fw-strong); margin-top: 1em; margin-bottom: 0.5em; color: var(--text-primary); }
+.prose h3 { font-size: var(--fs-base); font-weight: var(--fw-strong); margin-top: 0.75em; color: var(--text-secondary); }
+.prose ul, .prose ol { margin-left: 1.5em; }
+.prose li { margin: 0.25em 0; }
+.prose code { background: var(--surface-alt); padding: 1px 4px; font-size: 0.9em; }
+.prose pre { background: var(--surface-alt); color: var(--text-primary); border: 1px solid var(--hairline); padding: 12px; overflow-x: auto; }
+.prose pre code { background: transparent; color: inherit; }
+.prose strong { color: var(--text-primary); font-weight: var(--fw-strong); }
+
+/* ============================================================
+   文档 / Wiki / Eval 列表卡 (统一: 方角 + hairline + surface-alt hover + 选中左 accent 条)
+   ============================================================ */
+.doc-card {
+  padding: 10px 12px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.doc-card:hover { border-color: var(--hairline-strong); background: var(--surface-alt); }
+
+/* 上传区拖拽进入态: 绕开被中和的 bg-indigo-50, 给出可感知的"可放置"反馈 */
+.upload-dragover { background: var(--accent-weak) !important; border-color: var(--accent) !important; }
+
+/* ============================================================
+   Skill 卡
+   ============================================================ */
+.skill-card { border: 1px solid var(--hairline); cursor: help; background: var(--surface); }
+.skill-card:hover { border-color: var(--hairline-strong); background: var(--surface-alt); }
+.skill-card.skill-active {
+  background: var(--surface-alt) !important;
+  border-left: 2px solid var(--accent) !important;
+}
+
+/* ============================================================
+   事件中心
+   ============================================================ */
+.incident-grid { height: calc(100vh - 360px); min-height: 520px; }
+
+/* 过滤 chip (方角, 选中用 accent 边 + 文字, 不用大色块) */
+.inc-chip {
+  padding: 4px 9px;
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.inc-chip:hover { background: var(--surface-alt); color: var(--text-secondary); }
+.inc-chip-active {
+  background: var(--surface-alt) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--accent) !important;
+  font-weight: var(--fw-medium);
+}
+
+/* 任务列表卡 */
+.inc-task {
+  padding: 10px;
+  border: 1px solid var(--hairline);
+  border-left: 2px solid transparent;
+  background: var(--surface);
+  cursor: pointer;
+  position: relative;
+}
+.inc-task:hover { border-color: var(--hairline-strong); background: var(--surface-alt); }
+.inc-task.selected { border-left-color: var(--accent); background: var(--surface-alt); }
+.inc-task.bulk-selected { border-color: rgba(225, 29, 72, 0.35); }
+.inc-task-check {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+.inc-task-check:disabled { cursor: not-allowed; opacity: 0.35; }
+
+/* 状态徽章 = 圆点 + 大写 mono 文字, 透明底无边框 */
+.inc-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0; border: 0; background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs); font-weight: var(--fw-medium);
+  text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.4;
+}
+.inc-badge::before { content: ""; width: 7px; height: 7px; border-radius: 999px; background: currentColor; flex: none; }
+.inc-badge-pending   { color: var(--st-pending); }
+.inc-badge-running   { color: var(--st-running); }
+.inc-badge-succeeded { color: var(--st-success); }
+.inc-badge-failed    { color: var(--st-failed); }
+.inc-badge-cancelled { color: var(--text-secondary); }  /* 比 unknown 深一档, 拉开区分 */
+.inc-badge-unknown   { color: var(--st-neutral); }
+
+/* 严重等级圆点 (无光晕; info = 灰) */
+.sev-dot { display: inline-block; width: 8px; height: 8px; margin-right: 5px; flex: none; }
+.sev-critical { background: var(--sev-critical); }
+.sev-warning  { background: var(--sev-warning); }
+.sev-info     { background: var(--sev-info); }
+.sev-unknown  { background: var(--sev-unknown); }
+.row-critical { background: var(--tint-critical); }
+
+/* 证据卡片 */
+.evidence-card { border: 1px solid var(--hairline); border-left-width: 2px; background: var(--surface); padding: 8px 10px; font-size: 12px; }
+.evidence-card .ev-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+.evidence-card .ev-content {
+  margin-top: 6px; padding: 6px 8px; background: var(--surface-alt); border: 1px solid var(--hairline);
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary);
+  max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+}
+
+/* 证据 source 左色条 (细 2px 脊柱, 颜色即来源) */
+.src-alert            { border-left-color: var(--sev-critical); }
+.src-log              { border-left-color: var(--accent); }
+.src-metric           { border-left-color: var(--accent); }
+.src-trace            { border-left-color: var(--text-muted); }
+.src-runbook          { border-left-color: var(--st-success); }
+.src-incident_history { border-left-color: var(--sev-warning); }
+.src-rca              { border-left-color: var(--accent); }
+.src-mcp_tool_result  { border-left-color: var(--text-muted); }
+.src-human_feedback   { border-left-color: var(--text-muted); }
+.src-unknown          { border-left-color: var(--hairline-strong); }
+
+/* source 标签 = 大写 mono 文字, 无彩底 */
+.src-tag {
+  display: inline-flex; align-items: center; padding: 0;
+  font-family: var(--font-mono); font-size: 10px; font-weight: var(--fw-strong);
+  text-transform: uppercase; letter-spacing: 0.04em; background: transparent;
+}
+.src-tag-alert            { color: var(--sev-critical); }
+.src-tag-log              { color: var(--accent); }
+.src-tag-metric           { color: var(--accent); }
+.src-tag-trace            { color: var(--text-muted); }
+.src-tag-runbook          { color: var(--st-success); }
+.src-tag-incident_history { color: var(--sev-warning); }
+.src-tag-rca              { color: var(--accent); }
+.src-tag-mcp_tool_result  { color: var(--text-muted); }
+.src-tag-human_feedback   { color: var(--text-muted); }
+.src-tag-unknown          { color: var(--text-muted); }
+
+/* 详情分段标题 */
+.inc-section-title {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: var(--fs-sm); font-weight: var(--fw-strong); color: var(--text-secondary);
+  margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--hairline);
+}
+.inc-section-title:first-child { margin-top: 0; }
+
+/* KV 表 */
+.inc-kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; font-size: 12px; color: var(--text-primary); }
+.inc-kv dt { color: var(--text-muted); }
+.inc-kv dd { font-family: var(--font-mono); word-break: break-all; }
+
+/* 关键信号 (扁平: hairline + surface-alt + 左 accent 条) */
+.key-signal-card { border: 1px solid var(--hairline); border-left: 2px solid var(--accent); background: var(--surface-alt); padding: 12px; }
+.key-signal-card .key-signal-title {
+  font-family: var(--font-mono); font-size: var(--fs-micro); font-weight: var(--fw-strong);
+  text-transform: uppercase; letter-spacing: var(--track-eyebrow); color: var(--accent); margin-bottom: 8px;
+}
+.key-signal-item { background: var(--surface); border: 1px solid var(--hairline); padding: 8px 10px; margin-bottom: 6px; font-size: 12px; }
+.key-signal-item:last-child { margin-bottom: 0; }
+
+/* Runbook 引用标签 */
+.runbook-ref {
+  display: inline-block; background: transparent; color: var(--st-success);
+  border: 1px solid var(--hairline); padding: 2px 8px; font-size: 11px; font-weight: var(--fw-medium);
+  margin: 2px 4px 2px 0; font-family: var(--font-mono);
+}
+
+/* ============================================================
+   Wiki / Eval / Approval
+   ============================================================ */
+.wiki-page-card { border: 1px solid var(--hairline); border-left: 2px solid transparent; background: var(--surface); padding: 8px 10px; cursor: pointer; }
+.wiki-page-card:hover { border-color: var(--hairline-strong); background: var(--surface-alt); }
+.wiki-page-card.selected { border-left-color: var(--accent); background: var(--surface-alt); }
+.wiki-cat-tag { display: inline-block; padding: 0; font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 5px; }
+.wiki-cat-patterns { color: var(--sev-warning); }
+.wiki-cat-services { color: var(--accent); }
+
+.wikilink { color: var(--accent); background: var(--accent-weak); padding: 1px 4px; font-family: var(--font-mono); font-size: 0.92em; cursor: pointer; text-decoration: none; }
+.wikilink:hover { background: var(--accent); color: var(--accent-text); }
+
+.eval-card { padding: 8px 10px; border: 1px solid var(--hairline); border-left: 2px solid transparent; background: var(--surface); cursor: pointer; font-size: 12px; }
+.eval-card:hover { border-color: var(--hairline-strong); background: var(--surface-alt); }
+.eval-card.selected { border-left-color: var(--accent); background: var(--surface-alt); }
+.eval-metric { display: inline-block; margin-right: 8px; margin-bottom: 4px; padding: 2px 6px; background: var(--surface-alt); color: var(--text-secondary); font-family: var(--font-mono); font-size: 11px; }
+.eval-metric.good { color: var(--st-success); }
+.eval-metric.warn { color: var(--st-pending); }
+.eval-metric.bad  { color: var(--st-failed); }
+
+.approval-card { border: 1px solid var(--hairline); border-left: 2px solid var(--st-pending); background: var(--surface); padding: 10px; }
+.approval-card .approval-tool { font-family: var(--font-mono); font-weight: var(--fw-strong); color: var(--text-primary); }
+.approval-actions { display: flex; gap: 6px; margin-top: 8px; }
+.approval-btn { flex: 1; padding: 5px 10px; font-size: 11px; font-weight: var(--fw-medium); cursor: pointer; border: 1px solid var(--hairline); background: transparent; }
+.approval-btn-allow { color: var(--st-success); }
+.approval-btn-allow:hover { background: var(--surface-alt); border-color: var(--st-success); }
+.approval-btn-deny  { color: var(--st-failed); }
+.approval-btn-deny:hover { background: var(--surface-alt); border-color: var(--st-failed); }

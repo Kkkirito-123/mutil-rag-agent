@@ -1,0 +1,67 @@
+# ============================================================
+# Multi-Agent AIOps Platform - 生产依赖 (LangChain v1.x)
+# ============================================================
+# 升级时间: 2025-10 (LangChain v1.0 发布后)
+# 安装: pip install -r requirements.txt --upgrade
+
+# ---------- Web 框架 ----------
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.32.0
+sse-starlette>=2.1.0
+python-multipart>=0.0.9
+aiofiles>=24.1.0
+
+# ---------- LangChain v1.x 全家桶 ----------
+# v1 重大变化:
+#   - create_react_agent 迁到 langchain.agents.create_agent
+#   - langchain_community 多数子模块迁出为独立包
+#   - 旧 0.3.x API 仍可用但会 deprecation warning
+langchain>=1.0.0,<2.0.0
+langchain-core>=1.2.0,<2.0.0
+langchain-openai>=1.0.0,<2.0.0
+langchain-text-splitters>=1.1.0,<2.0.0
+
+# ---------- LangGraph (已经在 v1 了) ----------
+langgraph>=1.0.0,<2.0.0
+langgraph-checkpoint>=3.0.0
+
+# ---------- 向量数据库 ----------
+pymilvus>=2.4.0
+langchain-milvus>=0.3.3,<0.4.0
+
+# ---------- RAG Hybrid Search ----------
+# rank_bm25: 纯 Python BM25 实现 (~10KB), 用于 Hybrid Search 的 sparse 路.
+# 为什么不用 elasticsearch / opensearch: 项目规模 (千-万 chunks) 内存索引足够,
+# 不引入额外服务. 大规模时再迁外部 BM25 服务.
+rank_bm25>=0.2.2
+
+# ---------- MCP (Model Context Protocol) ----------
+fastmcp>=2.14.0
+langchain-mcp-adapters>=0.2.1,<0.3.0
+
+# ---------- 配置与数据校验 ----------
+pydantic>=2.9.0,<3.0.0
+pydantic-settings>=2.5.0
+python-dotenv>=1.0.1
+
+# ---------- 日志与可观测性 ----------
+loguru>=0.7.2
+
+# ---------- 工具库 ----------
+httpx>=0.27.0
+numpy>=1.26.0
+psutil>=5.9.0
+markdown-it-py>=3.0.0
+tiktoken>=0.7.0
+PyYAML>=6.0  # SKILL.md frontmatter 解析
+redis>=5.0.0
+rank-bm25
+asyncpg>=0.29.0
+
+# ---------- 评测 (可选, 仅 scripts/eval_ragas.py 用) ----------
+# Ragas 评 RAG 路径的 faithfulness / answer_relevancy / context_precision/recall.
+# 需要老版 langchain-community (Ragas 0.4.x 内部仍 import 已 sunset 的 vertexai 路径).
+ragas>=0.4.0
+langchain-community<0.4
+# OpenEvals 补充 groundedness / helpfulness 双评委，避免只优化单一 RAGAS 指标。
+openevals>=0.2.0,<0.3.0

@@ -1,0 +1,18 @@
+# 构建镜像时排除无关/大体积目录, 加快构建、缩小镜像
+.git
+.idea
+.vscode
+__pycache__/
+**/__pycache__/
+*.pyc
+.DS_Store
+logs/
+.run/
+volumes/
+.kb_clone_tmp/
+benchmark/reports/
+data/wiki/
+*.bak-bind-mounts
+docker-compose.yml.bak-bind-mounts
+node_modules/
+open-webSearch-main/node_modules/

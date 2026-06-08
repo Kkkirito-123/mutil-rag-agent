@@ -1,0 +1,22 @@
+# SMART device temperature critical
+
+> Group: **Basic resource monitoring**  
+> Service: **S.M.A.R.T Device Monitoring**  
+> Exporter: `smartctl-exporter`  
+> Severity: **critical**
+
+## 现象 / Description
+
+Device temperature critical on {{ $labels.instance }} drive {{ $labels.device }} over 70°C
+
+## PromQL 查询
+
+```promql
+(max_over_time(smartctl_device_temperature{temperature_type="current"} [5m]) unless on (instance, device) smartctl_device_temperature{temperature_type="drive_trip"}) > 70
+```
+
+## 故障定位
+
+- 触发该告警时, 检查 S.M.A.R.T Device Monitoring 的相关指标和日志
+- 严重等级: critical
+- 来源: awesome-prometheus-alerts / Basic resource monitoring / S.M.A.R.T Device Monitoring
