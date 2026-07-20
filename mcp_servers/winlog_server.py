@@ -12,10 +12,8 @@
 
 import json
 import subprocess
-from typing import Optional
 
 from fastmcp import FastMCP
-from loguru import logger
 
 mcp = FastMCP(name="WindowsEventLogServer")
 

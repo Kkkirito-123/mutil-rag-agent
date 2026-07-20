@@ -100,7 +100,7 @@ def render_dataset(dataset: str, templates: list[dict[str, str]], samples: dict[
         f"> 来源: **loghub-2.0 / {dataset}**  ",
         f"> 模板数: **{len(templates)}**  ",
         f"> 覆盖日志量: **{total_logs:,}** 行  ",
-        f"> 用途: 该系统常见日志模式速查; 诊断时按模式匹配定位异常日志。",
+        "> 用途: 该系统常见日志模式速查; 诊断时按模式匹配定位异常日志。",
         "",
         "每条模板中的 `<*>` 是被参数化的可变字段 (IP / blockId / 数值等)。",
         "",

@@ -120,28 +120,31 @@ external-skills/
 3. 在 `## 推荐排查步骤` 下用编号列表写 Playbook
 4. 调 `POST /api/v1/skills/reload` 或重启进程, `SkillRegistry` 会重新加载
 
-## 路由策略
+## 当前路由策略
 
-第一版采用 **纯 LLM + structured output**:
+主路由采用 **LLM + structured output**：
 
 1. 把所有 Skill 的 `name + description + triggers` 拼成菜单
 2. LLM 返回 `SkillChoice(skill_name, reason)`
-3. 不存在的 name / LLM 异常 → 回退到 `generic_oncall`
+3. 不存在的 name → 回退到 `generic_oncall`
+4. LLM 异常 → 先用规则判断输入是否属于 OnCall，再回退到 `generic_oncall` 或结束
 
 后续可以叠加:
 - 启发式 trigger 关键词优先匹配
 - 缓存路由决策, 减少 LLM 调用
 - 多 Skill 并行执行 (复合故障)
 
-## 工具白名单 (已强制)
+## 工具与权限边界
 
-每个 Skill 的 `allowed_tools` 字段已在 `app/runtime/tool_filter.py` 强制:
+每个 Skill 的 `allowed_tools` 会进入 `app/runtime/tool_filter.py` 与
+`app/runtime/permissions.py` 的联合判定：
 
-- Executor 启动时通过 `filter_tools_for_skill()` 过滤工具
-- 不在白名单的工具不会暴露给 Agent (LLM 看不到, 也调不了)
-- 同一个 Skill 的执行器会按 skill、工具集合、运行模式、权限模式缓存复用
+- 写入、通知和高风险工具必须显式出现在 `allowed_tools` 中，否则不会暴露给 Agent
+- 已登记为只读的工具可以按运行时策略补充，避免 Skill 漏配查询工具后只能猜测
+- `PermissionMode` 与 Guardrails 会继续对候选工具执行 allow / ask / deny 判定
+- 同一个 Skill 的执行器会按 Skill、工具集合、运行模式和权限模式缓存复用
 
 风险分级 `risk_level`:
-- `low`: 只读工具 (查询本机状态、看日志)
-- `medium`: 写工具或可能影响 (发送通知、读取敏感事件日志)
-- `high`: 危险操作 (容器重启等, 默认禁用, 需 `.env` 显式开启)
+- `low`: 只读或低影响查询
+- `medium`: 外部访问或需要额外审慎的数据读取
+- `high`: 写入或破坏性操作；默认阻断，`ask_destructive` 模式下可进入人工审批

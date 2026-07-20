@@ -32,7 +32,7 @@ _SYSTEM_PROMPT = (
     "可用知识源 (内部混合, 你按关键词侧重):\n"
     "- Prometheus 告警规则附带的处置建议\n"
     "- 内部 OnCall SOP (Redis/MySQL/通用告警)\n"
-    "- (loghub 日志模板尽量少看 —— 那是 LogAgent 的事)\n\n"
+    "- 可选日志模板只作为辅助线索，优先交给 LogAgent 处理\n\n"
     "硬性约束:\n"
     "1. 检索关键词应含 'SOP / 处理流程 / 排查步骤 / 怎么处理 / runbook' 等流程类词;\n"
     "2. summary 必须: 点名命中的 SOP 来源 + 关键步骤 (3-5 条编号要点); 若无匹配明确说\n"

@@ -136,7 +136,7 @@ async def _run(args: argparse.Namespace, make_req) -> None:
                     latencies.append(dt)
                     codes[code] = codes.get(code, 0) + 1
 
-        print(f"[loadtest] 压测前队列快照:")
+        print("[loadtest] 压测前队列快照:")
         await _fetch_status(args.base_url)
         print(f"[loadtest] 发压: n={args.n} concurrency={args.concurrency} ...")
         t0 = time.perf_counter()

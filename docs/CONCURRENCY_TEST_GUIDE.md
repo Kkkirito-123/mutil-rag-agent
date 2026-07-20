@@ -1,10 +1,10 @@
 # 并发与队列测试指令
 
-适用于当前 `MultiAgentAIOps` 项目。默认地址：
+适用于当前 `mutil-rag-agent` 仓库。以下命令以 Bash 为例，默认地址为：
 
 ```bash
-BASE_URL=http://localhost:9900
-cd /path/to/MultiAgentAIOps
+export BASE_URL=http://localhost:9900
+cd /path/to/mutil-rag-agent
 ```
 
 > 注意：`submit` 和 `webhook` 会创建真实诊断任务，Worker 会调用 LLM，可能产生费用。  
@@ -27,7 +27,7 @@ AGENT_MAX_CONCURRENCY=2          Agent 内部并发限制
 EXECUTOR_MAX_PARALLEL=6          单轮最多并行执行 6 个安全工具
 ```
 
-接口限流默认值（未写入 `.env` 时使用）：
+接口限流默认值（`.env.example` 已列出；删除对应配置时仍使用代码默认值）：
 
 ```text
 RATE_LIMIT_MANUAL_PER_IP_PER_MIN=20

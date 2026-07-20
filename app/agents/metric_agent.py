@@ -6,18 +6,19 @@ s06 范式 (借鉴 learn-claude-code 课程, 见 COURSE_SUMMARY.md):
   - 中间推理 (内部 messages[]) 不进共享 state, 只把结论压成一条 Evidence 返回;
   - 失败必降级 (返回带 error metadata 的占位 Evidence), 不抛, 不拖垮 deep graph。
 
-工具白名单 (硬编码): 4 个本机 read-only 指标工具
+工具集合 (硬编码): 配置存在时优先加入 Prometheus read-only 查询工具，并始终保留
+4 个本机只读指标工具作为兜底:
   get_local_system_overview / get_local_cpu_memory /
   get_local_disk_usage / list_top_processes
 
 为什么硬编码而不走 fast 的 filter_tools_for_skill:
   - skill 过滤是 fast Plan-Execute 的概念, 与"专业 Agent 自带工具白名单"是不同范式;
-  - 骨架阶段先让 Agent 形态契约清晰可见, 不混入 skill 路由;
-  - 本机 system 工具全是 read-only, 跳过 PermissionMode 在骨架阶段安全可控。
+  - 专业 Agent 形态契约与 fast 的 Skill 路由相互独立;
+  - 当前集合仅包含已登记的 read-only 指标工具，但仍需要补齐统一 PermissionMode。
 
-TODO(M7+):
-  - 真后端: 接 Prometheus / VictoriaMetrics 等真 metric 数据源 (本机指标是骨架演示);
-  - 权限: 接入 PermissionMode (现在 decisions=None 走 run_parallel_agent 的向后兼容路径);
+TODO:
+  - 数据源: 在 Prometheus / VictoriaMetrics 之外扩展更多指标后端;
+  - 权限: 接入 PermissionMode (现在 decisions=None 走 run_parallel_agent 的兼容路径);
   - 复用: 若多个专业 Agent 都需要"scoped LLM 循环 + Evidence 压制", 抽 specialist_runner 公共层。
 """
 
@@ -59,7 +60,8 @@ _SYSTEM_PROMPT = (
     "你的职责: 围绕给定的故障现象, 调用指标采集工具, 拿到结构化指标快照, "
     "找出**异常项**并压成一段中文 summary。\n\n"
     "硬性约束:\n"
-    "1. 只用本机指标采集工具 (CPU/内存/磁盘/进程), 不要谈日志/调用链/处置建议——那是别的 Agent 的事。\n"
+    "1. 只用指标采集工具；配置 Prometheus 时优先查询目标指标，本机工具仅作兜底。"
+    "不要谈日志/调用链/处置建议——那是别的 Agent 的事。\n"
     "2. summary 必须: 点名异常项及其指标值; 若无异常明确说\"未观察到异常\"; 不罗列全部数据, 只点关键 (<=300 字)。\n"
     "3. 最多 4 轮 LLM↔工具往返, 拿到必要数据就停, 不要漫游。\n"
     "4. 工具失败时直接说\"工具不可用\", 不要编造数据。"

@@ -7,9 +7,10 @@ s06 范式 (与 MetricAgent 对称, 见 COURSE_SUMMARY.md):
   - 失败必降级 (返回带 error metadata 的占位 Evidence), 不抛, 不拖垮 deep graph。
 
 工具白名单 (硬编码): 1 个 knowledge_tool.search_knowledge_base
-  - 知识库已含: 951 个 Prometheus 告警规则 + 669 个 loghub 日志模板 + 3 个 OnCall SOP
-  - 这一刀首次把"知识侧资产"用进"诊断侧" —— LogAgent 不读原始日志 (8.2G 不进库),
-    而是去 RAG 命中"该现象对应的日志模板和告警规则", 把匹配结果压成 log_excerpt Evidence。
+  - 默认公开语料包含 Prometheus 告警规则和 OnCall SOP；
+  - 可通过 scripts/convert_log_templates.py 额外导入 loghub 模板；
+  - LogAgent 不直接读取原始日志，而是从当前已导入的知识库中匹配告警规则、
+    日志模板或 SOP，并把结果压成 log_excerpt Evidence。
 
 与 MetricAgent 的差异:
   - max_iters=3 (RAG 查询通常 1-2 次足够; metric 要采多个工具)
@@ -44,7 +45,7 @@ _SYSTEM_PROMPT = (
     "**告警规则**或**排障 SOP**, 找出与现象**匹配**的模式, 并压成一段中文 summary。\n\n"
     "可用知识源 (search_knowledge_base 内部已混合):\n"
     "- Prometheus 告警规则 (含 PromQL 和处理建议)\n"
-    "- loghub-2.0 日志模板 (HDFS/Spark/BGL/OpenSSH/Apache 共 669 个模板)\n"
+    "- 可选的 loghub-2.0 日志模板 (仅在用户已导入时存在)\n"
     "- 内部 OnCall SOP (Redis/MySQL/通用告警)\n\n"
     "硬性约束:\n"
     "1. 只用知识库检索工具, 不要谈指标/调用链/处置建议——那是别的 Agent 的事。\n"

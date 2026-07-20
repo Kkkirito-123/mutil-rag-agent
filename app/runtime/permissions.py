@@ -10,7 +10,7 @@
 
 每次决策返回 PermissionDecision { behavior, reason_type, reason }, 三态:
   - allow:  正常调用
-  - ask:    需要人工审批 (MVP 阶段直接转 deny)
+  - ask:    需要人工审批；审批开启时等待 allow/deny，关闭时按 deny 处理
   - deny:   拒绝调用
 
 设计原则:
@@ -76,7 +76,7 @@ class PermissionDecision(BaseModel):
         return self.behavior == "allow"
 
     def is_blocked(self) -> bool:
-        """ask 也算 blocked, 因为 MVP 阶段 ask 会转成 deny 给 LLM 看到."""
+        """ask 在审批完成前也属于阻塞状态。"""
         return self.behavior in ("ask", "deny")
 
 

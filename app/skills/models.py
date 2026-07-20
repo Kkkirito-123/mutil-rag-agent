@@ -55,7 +55,10 @@ class Skill(BaseModel):
     )
     allowed_tools: List[str] = Field(
         default_factory=list,
-        description="允许 Executor 调用的工具白名单. 第一版仅作记录, Harness 阶段强制",
+        description=(
+            "允许 Executor 调用的工具列表. 写入、通知和高风险工具必须显式列出; "
+            "只读工具可按运行时策略补充"
+        ),
     )
     risk_level: RiskLevel = Field(
         default="low",

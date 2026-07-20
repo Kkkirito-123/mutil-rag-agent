@@ -49,7 +49,6 @@ from app.runtime.transitions import (
     DEEP_RCA_JUDGED,
     DEEP_REMEDIATION_PLANNED,
     DEEP_REPORT_DONE,
-    DEEP_STUB,
     make_transition,
 )
 
@@ -138,7 +137,7 @@ async def incident_manager_node(state: DeepDiagnosisState) -> DeepDiagnosisState
             }
         # 充实上下文: 把 DB task 关键字段透传 (alert_signature 已在 runner 里算好, 这里不重算)
         payload = task.get("payload") or {}
-        patch: Dict[str, Any] = {
+        patch: dict[str, Any] = {
             "transition_history": [make_transition(
                 "incident_manager", DEEP_INCIDENT_LOADED,
                 f"{detail} alertname={payload.get('alertname', '-')} severity={payload.get('severity', '-')}",
@@ -361,13 +360,10 @@ def _dispatch_guard(name: str, inner):
 # ④ 专业 subagent (隔离上下文, 只回 Evidence) —— fan-out 并行
 # ============================================================
 def _make_specialist_node(name: str, source: EvidenceSource, etype: str):
-    """造一个专业 subagent 节点 (stub)。
+    """为尚未注册真实实现的专业 Agent 创建降级节点。
 
-    真实实现 (TODO M7): 在这里启动一个**隔离的最小 agent 循环** ——
-      - 自己的 scoped 输入 (现象 + evidence_plan 里给它的策略);
-      - 自己的 LLM + 该域工具 (Log->日志工具, Metric->指标工具, ...);
-      - 只把结论压成一条/几条 Evidence 返回, 中间推理不进共享 state。
-    这就是课程 s06 的 subagent: 隔离 + 返回 summary, 而非 teammate 互聊。
+    当前 ``SPECIALISTS`` 中的四个节点都有真实实现。这个 fallback 仅供未来新增
+    Specialist 时兜底，确保未完成的扩展不会让整张 deep graph 无法编译。
     """
 
     def _node(state: DeepDiagnosisState) -> DeepDiagnosisState:

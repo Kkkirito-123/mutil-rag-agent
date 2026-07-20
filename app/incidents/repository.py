@@ -7,7 +7,6 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from loguru import logger
 
 from app.config import settings
 from app.core.db_utils import json_dump, new_id
@@ -15,7 +14,6 @@ from app.db.postgres import get_pool
 from app.incidents.models import (
     AlertStatus,
     DiagnosisMode,
-    DiagnosisTaskStatus,
     IncidentIngestResult,
     NormalizedAlert,
 )

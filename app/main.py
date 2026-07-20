@@ -176,7 +176,7 @@ if FRONTEND_DIR.exists():
         name="frontend",
     )
 else:
-    logger.warning(f"前端目录不存在: {FRONTEND_DIR} (将在阶段 5 创建)")
+    logger.warning(f"前端目录不存在: {FRONTEND_DIR}，仅暴露 API 状态页")
 
     @app.get("/", include_in_schema=False)
     async def root() -> ApiResponse[dict]:
@@ -188,7 +188,7 @@ else:
                 "docs": "/docs",
                 "health": f"{API_PREFIX}/health",
             },
-            message="服务运行中, 前端目录将在阶段 5 创建",
+            message="服务运行中，但当前部署未包含前端静态文件",
         )
 
 
