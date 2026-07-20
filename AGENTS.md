@@ -1,13 +1,15 @@
 # Repository Guide for AI Coding Agents
 
-This file is the repository-wide operational authority for Codex, Claude Code,
-Kimi Code, and other coding agents. `AGENTS.zh-CN.md` is the synchronized
-human-facing Chinese translation. `CLAUDE.md` imports this file for Claude Code.
+This file is the repository-wide source of truth and current operational map for
+Codex, Claude Code, Kimi Code, and other coding agents. `AGENTS.zh-CN.md` is the
+synchronized human-facing Chinese translation. `CLAUDE.md` imports this file for
+Claude Code.
 
 ## 1. Authority and Working Contract
 
-- Read this file before repository actions. A nearer `AGENTS.md` may add
-  subtree-specific commands or constraints but may not weaken these rules.
+- Read this file and any nearer `AGENTS.md` before acting in a subtree. A nearer
+  guide may add subtree-specific commands or constraints but may not weaken root
+  rules.
 - Source and executable checks describe current behavior. Approved designs
   describe intended behavior. Report drift instead of silently choosing one.
 - Reply in Chinese unless the user requests another language. Keep source
@@ -20,9 +22,8 @@ human-facing Chinese translation. `CLAUDE.md` imports this file for Claude Code.
   unrelated changes.
 - Before a feature, refactor, deletion, dependency or schema change, batch edit,
   global configuration change, new top-level directory, or other high-impact
-  change, present a plan and wait for approval.
-- A plan states the goal, users or stakeholders, MVP, non-goals, file scope,
-  acceptance criteria, and risks or tradeoffs.
+  change, present the goal, users or stakeholders, MVP, non-goals, file scope,
+  acceptance criteria, and risks or tradeoffs for approval.
 - Never expose credentials or private endpoints in source, command arguments,
   fixtures, logs, screenshots, manifests, or results. Confirm scope before an
   external write or irreversible action.
@@ -42,6 +43,20 @@ claim of production readiness.
 
 Primary stakeholder: the repository owner and maintainer. Secondary stakeholders
 are users who run the demo and contributors who need reproducible project facts.
+
+### Keep this map current
+
+This guide describes how the repository works now; it is not a changelog,
+backlog, or copy of every implementation detail. Update the relevant root or
+module guide in the same change when code changes the top-level layout, module
+ownership, service topology, primary flow or entry point, dependency direction,
+public protocol, compatibility or security boundary, canonical command, or
+validation requirement.
+
+Do not churn this guide for an internal refactor or small bug fix that leaves
+those facts unchanged. Update `README.md` for user-facing setup or behavior. Keep
+durable detail that cannot fit this orientation map in
+`docs/ARCHITECTURE.md`, and link instead of duplicating it.
 
 ### Verified stack
 
@@ -137,7 +152,10 @@ gate; confirm credentials, cost, data scope, and service readiness first.
 Do not duplicate the same facts across README, architecture, benchmark, and
 pressure-test documents. Link to the owning document instead.
 
-## 5. Architecture and Safety Invariants
+## 5. Architecture and Safety Boundaries
+
+See `docs/ARCHITECTURE.md` for the detailed runtime and data flow. The following
+are the compact boundaries an agent must preserve while editing:
 
 - The API accepts and validates work. High-concurrency diagnosis should be
   persisted and queued instead of executed synchronously in the request process.
