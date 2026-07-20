@@ -6,14 +6,29 @@
 ![Milvus](https://img.shields.io/badge/Milvus-2.4-purple)
 ![MCP](https://img.shields.io/badge/MCP-Tools-black)
 
+> [!IMPORTANT]
+> ### 项目定位与维护状态
+>
+> 本项目主要用于学习和理解基础的 **Agent Workflow** 与 **RAG** 使用方式，适合作为多智能体
+> 应用的入门示例。你可以通过本项目了解任务如何在不同 Agent 之间流转、RAG 如何完成知识
+> 检索与上下文补充，以及工具调用、结果汇总和诊断报告生成等基本流程。
+>
+> 项目同时提供了 **Skills** 的基础用法：将特定领域的角色、步骤、工具权限和输出要求组织成
+> 可复用的 Skill，并由路由器根据任务选择合适的 Skill。Skills 采用**渐进式披露**思路——
+> 路由阶段只向模型提供简短的名称和用途，任务真正命中后才把完整 Playbook 和工具约束加入
+> 执行上下文，从而减少无关信息，让 Agent 更专注于当前任务。
+>
+> 本仓库仅用于个人学习、技术演示和入门参考，不建议直接用于生产环境。**当前项目已停止更新**；
+> 后续会在[我的 GitHub 仓库](https://github.com/Kkkirito-123?tab=repositories)中发布重新整理的
+> 新项目，带来更清晰的工程结构和更完整的 Agent 实践。新项目很快就来，敬请关注。
+
+---
+
 面向 OnCall / SRE 场景的多智能体诊断工作台。系统把用户故障描述或 Alertmanager 告警转换为
 结构化任务，选择对应 Skill，通过 RAG 与 MCP 工具收集证据，并输出可追溯的 Markdown 报告。
 
 V3 在原有单次诊断链路上增加了 `fast / deep` 双模式、Redis Streams 队列、后台 Worker、
 Postgres 事实库、事件中心、权限与审批结构、LLM Wiki、RAG 评测和并发压测。
-
-> 这是个人维护的公开参考实现，适合学习、演示和二次开发，不等同于生产就绪承诺。真实部署前
-> 仍需补充身份认证、多租户隔离、网络访问控制、密钥管理、CI 和完整自动化测试。
 
 [项目视频](https://www.bilibili.com/video/BV182RCBGEod/)
 
