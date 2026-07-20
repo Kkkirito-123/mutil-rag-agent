@@ -28,7 +28,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import random
 import sys
 import time
@@ -235,7 +234,7 @@ def list_history(base_url: str, limit: int = 10) -> None:
             print(f"    report        : {preview}{'...' if len(report) > 300 else ''}")
             print(f"    report_chars  : {len(report)}")
         else:
-            print(f"    report        : (\u672a\u751f\u6210)")
+            print("    report        : (\u672a\u751f\u6210)")
     print()
 
 

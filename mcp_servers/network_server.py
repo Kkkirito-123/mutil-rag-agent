@@ -13,12 +13,10 @@
 import socket
 import subprocess
 import time
-from typing import Optional
 from urllib.parse import urlparse
 
 import httpx
 from fastmcp import FastMCP
-from loguru import logger
 
 mcp = FastMCP(name="NetworkServer")
 

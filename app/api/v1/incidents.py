@@ -157,7 +157,7 @@ async def create_incident_from_chat(req: FromChatRequest) -> dict[str, Any]:
                 },
             )
             await incident_repository.set_task_queue_message(result.task_id, enqueued_message_id)
-        except Exception as exc:
+        except Exception:
             # 入队失败不阻塞: 任务已经在 DB 里, 用户仍能在事件中心看到 pending
             enqueued_message_id = ""
 
